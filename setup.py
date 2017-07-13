@@ -1,12 +1,13 @@
-from setuptools import setup
 import os
+
+from setuptools import setup
 
 setup(
     name="FRTB",
     version="0.1",
     author="Mark Teper",
     author_email="",
-    description=("Python package for computing FRTB SBA Approach"),
+    description="Python package for computing FRTB SBA Approach",
     license="MIT",
     keywords="FRTB Finance Basel",
     install_requires=["numpy", "pyyaml"],
@@ -19,5 +20,5 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3.4"
     ],
-    zip_safe = True
+    zip_safe=True
 )

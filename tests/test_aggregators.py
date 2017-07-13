@@ -4,7 +4,7 @@ import pytest
 from FRTB import aggregators as agg
 
 
-def test_constant_aggregator():
+def test_constant():
     n = numpy.array([1, -2, 3])
     value = agg.constant_aggregator(n, 1)
     assert value == pytest.approx((1 - 2 + 3) ** 2)
@@ -14,7 +14,7 @@ def test_constant_aggregator():
     assert value == pytest.approx(11)
 
 
-def test_matrix_aggregator():
+def test_matrix():
     n = numpy.array([1, -2, 3])
     m = numpy.array([
         [1, 0.3, 0.3],
@@ -23,3 +23,10 @@ def test_matrix_aggregator():
     ])
     value = agg.matrix_aggregator(n, m)
     assert value == pytest.approx(11)
+
+
+def test_lowest_corr():
+    n = numpy.array([1, -2, 3])
+    m = numpy.array([0.3, 0.3, 0])
+    value = agg.lowest_corr_aggregator(n, m)
+    assert value == pytest.approx(12.8)
