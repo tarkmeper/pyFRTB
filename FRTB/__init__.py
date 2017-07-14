@@ -1,19 +1,26 @@
-# from sba import calculate_SBA
-# from jtd import calculate_JTD
-# from nmrf import calculate_NMRF
+# from sba import calculate_SBA, append_SBA
+# from jtd import calculate_JTD, append_JTD
+# from nmrf import calculate_NMRF, append_NMRF,
 from .partial import merge_partial
+from .residual import calculate_residual, append_residual
 
 
-def calculate_capital(partial, cfg):
+def append_trades(trades, part):
+    errors = []
+    for trade in trades:
+        try:
+            # partial["SBA"] = append_SBA(trades, partial["SBA"]) if "SBA" in partial else append_SBA(trades, {})
+            part["residual"] = append_residual(trade, part["residual"] if "residual" in part else {})
+        except AttributeError as e:
+            errors += [e]
+    return part, errors
+
+
+def calculate_capital(part, cfg):
     result = {}
-    if "SBA" in partial:
-        result["sba"] = calculate_SBA(partial["SBA"], cfg["SBA"])
 
-    if "JTD" in partial:
-        result["jtd"] = calculate_JTD(partial["NMRF"], cfg["JTD"])
+    if "residual" in part:
+        result["residual"] = calculate_residual(part["residual"], cfg["residual"])
 
-    if "NMRF" in partial:
-        result["nmrf"] = calculate_NMRF(partial["NMRF"], cfg["NMRF"])
-
-    result["total"] = sum([f["value"] for f in result.values()])
+    result["total"] = sum([f["total"] for f in result.values()])
     return result

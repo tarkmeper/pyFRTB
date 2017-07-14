@@ -8,9 +8,7 @@ def constant_aggregator(vect, factor):
     """
     Aggregate a numpy vector using a constant correlation value
     :param vect:    Vector of values to aggregate
-    :type ndarray
     :param factor:  The constant correlation factor to use between elements
-    :type float
     :return: The aggregated value
     """
     matrix = vect.reshape(len(vect), 1)
