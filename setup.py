@@ -18,7 +18,7 @@ setup(
     long_description=open(os.path.join(os.path.dirname(__file__), 'README.md')).read(),
     classifiers=[
         "License :: OSI Approved :: MIT License",
-        "Programming Language :: Python :: 3.4"
+        "Programming Language :: Python :: 3.12"
     ],
     zip_safe=True
 )

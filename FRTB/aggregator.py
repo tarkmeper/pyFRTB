@@ -13,6 +13,7 @@ from FRTB.sensitivity import SensitivityBasedApproach
 from FRTB.engine import schema_load
 
 TRADE_SCHEMA = schema_load("trade.yaml")
+TRADE_VALIDATOR = Draft202012Validator(TRADE_SCHEMA)
 
 COMPONENTS = {
     "sensitivity": SensitivityBasedApproach,
@@ -62,7 +63,6 @@ class Aggregator:
             except KeyError:
                 raise KeyError("Unknown calculation component specified in input configuration: <%s>" % item)
 
-            self.trade_validator = Draft202012Validator(TRADE_SCHEMA)
             self.components[item] = cls(details)
 
     def merge(self, other: "Aggregator", weight: float = 1.0) -> None:
@@ -106,7 +106,7 @@ class Aggregator:
         :param trade: The trade to append.
         :param weight: The weight to apply to this set of trades, multiples values basd on the weight.
         """
-        errors = sorted(self.trade_validator.iter_errors(trade), key=lambda e: e.path)
+        errors = sorted(TRADE_VALIDATOR.iter_errors(trade), key=lambda e: e.path)
         if errors:
             raise ExceptionGroup('Trade is in valid with the following errors', errors)
 

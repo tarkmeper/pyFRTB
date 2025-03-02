@@ -2,3 +2,6 @@ coverage.xml
 .tox
 .venv
 .coverage
+examples/*.pickle
+examples/trade_set1.pickle
+examples/trade_set2.pickle

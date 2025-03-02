@@ -39,7 +39,6 @@ class SBAVariableBucketEngine(Engine):
         self.fields = details["fields"]
         self.sensitivity_type = sens_type
         self.RW = details["RW"]
-        self.RW_lookup = lambda x: (self.RW[x] if x in self.RW else self.RW["default"])
 
     def add(self, sens_entry, weight=1.0):
         # for the variable buckets we assume that all variable buckets are just based on fields without any
@@ -63,7 +62,7 @@ class SBAVariableBucketEngine(Engine):
 
         for idx, (name, val) in enumerate(self.buckets.items()):
             sums[idx], values[idx] = val.calculate(modifiers)
-            rw[idx] = self.RW_lookup(name)
+            rw[idx] = self.RW[idx] if idx in self.RW else self.RW["default"]
 
         numpy.multiply(values, rw, out=values)
         numpy.multiply(sums, rw, out=sums)
