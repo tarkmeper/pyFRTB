@@ -62,7 +62,7 @@ class SBAVariableBucketEngine(Engine):
 
         for idx, (name, val) in enumerate(self.buckets.items()):
             sums[idx], values[idx] = val.calculate(modifiers)
-            rw[idx] = self.RW[idx] if idx in self.RW else self.RW["default"]
+            rw[idx] = self.RW[name] if name in self.RW else self.RW["default"]
 
         numpy.multiply(values, rw, out=values)
         numpy.multiply(sums, rw, out=sums)
