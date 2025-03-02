@@ -1,0 +1,26 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+description: "Schema for managing the SBA engine configuration"
+properties:
+  mode: { const: "variable" }
+  fields:
+    type: array
+    items: { type: string }
+    description: "List of fields that are used to group these objects at the top level into buckets"
+  correlation:
+    type: number
+    minimum: -100
+    maximum: 100
+    descrition: "Correlation value to apply between buckets"
+  RW:
+    type: object
+    description: "Risk weights to use for each bucket, 'default' must be specified and is used if not found"
+    properties:
+      default: { type: number }
+    patternProperties:
+      "^[A-Z]+$":
+        type: number
+        minimum: 0.0
+    required: [ "default" ]
+  bucket_fields:
+    type: object
+required: [ "mode", "fields", "RW", "correlation" ]

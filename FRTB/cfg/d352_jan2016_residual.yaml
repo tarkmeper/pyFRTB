@@ -1,0 +1,12 @@
+exotic-products:
+    - [ commodity, option, environmental ]
+    - [ girr, exotic ]
+vanilla-products:
+    - [ fx, simple exotic, barrier ]
+    - [ fx, simple exotic, digital ]
+    - [ girr, option, swaption, bermuda ]
+    - [ credit, exotic]
+    - [ equity, option, variance ]
+    - [ equity, option, volatility ]
+vanilla-value: 0.1
+exotic-value: 1.0

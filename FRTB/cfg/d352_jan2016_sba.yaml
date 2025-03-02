@@ -1,0 +1,211 @@
+#######################################################################################################################
+################################################### FX ################################################################
+#######################################################################################################################
+fx:
+  mode: variable
+  fields: [ currency ]
+  delta:
+    RW:
+      AUD: 21.213
+      CAD: 21.213
+      CHF: 21.213
+      EUR: 21.213
+      GBP: 21.213
+      JPY: 21.213
+      HKD: 21.213
+      KRW: 21.213
+      MXN: 21.213
+      NZD: 21.213
+      RUB: 21.213
+      SEK: 21.213
+      SGD: 21.213
+      TRY: 21.213
+      USD: 21.213
+      ZAR: 21.213
+      default: 30
+  vega:
+    RW: { default: 110 } # 55 * sqrt(40) / sqrt(10)
+    added_bucket_fields:
+      option_maturity:
+        grouping: tenor-value
+        correlation: { theta: -1 }
+  curvature:
+    RW: { default: 1 }  # curvature must be built into the shocks so we don't adjust
+  bucket_fields:
+    currency: # there will never be more than one bucket since this matches with the top level bucket.
+      grouping: value
+      correlation: 100
+  correlation: 60
+
+
+#######################################################################################################################
+################################################### GIRR ##############################################################
+#######################################################################################################################
+girr:
+  mode: variable
+  fields: [ "currency" ]
+  delta:
+    RW: { CAD: 0.7071067811865475, USD: 0.7071067811865475, default: 1 }
+  vega:
+    RW: { default: 134.721 } # 55 * sqrt(60) / sqrt(10)
+    bucket_fields:
+      option_maturity:
+        grouping: tenor-value
+        correlation: { theta: -1 }
+      underlying_maturity:
+        grouping: tenor-value
+        correlation: { theta: -1 }
+  curvature:
+    RW: { default: 1 }  # curvature must be built into the shocks so we don't adjust
+  bucket_fields:
+    name:
+      grouping: value
+      correlation: 99.9
+    type:
+      grouping: bins
+      values: [ "yield", "inflation", "basis" ]
+      correlation:
+        type: matrix
+        matrix:
+          yield: { inflation: 40.04004004004004,  basis: 0 } # 40 was devided by 0.999 to take out the cross name
+          inflation: { basis: 0 }
+          basis: { }
+      RW_multiplier: { yield: 1, inflation: 2.25, basis: 2.25 }
+    tenor:
+      grouping: tenor
+      values: [ 0.25, 0.5, 1, 2, 3, 5, 10, 15, 20, 30 ]
+      correlation:
+        theta: -3
+        floor: 40
+      RW_multiplier: { 0.25: 2.4, 0.5: 2.4, 1: 2.25, 2: 1.88, 3: 1.73, 5: 1.5, 10: 1.5, 15: 1.5, 20: 1.5, 30: 1.5 }
+  correlation: 50
+
+
+#######################################################################################################################
+################################################# EQUITY ##############################################################
+#######################################################################################################################
+equity:
+  mode: fixed
+  fields: [ "market cap", "economy", "sector" ]
+  values:
+    "1": [ [ "large" ], [ "emerging" ], [ "consumer goods and services", "transportation and storage", "administrative and support service activities", "healthcare", "utilities" ] ]
+    "2": [ [ "large" ], [ "emerging" ], [ "telecommunications", "industrial" ] ]
+    "3": [ [ "large" ], [ "emerging" ], [ "basic materials", "energy", "agriculture", "manufacturing", "mining", "quarrying" ] ]
+    "4": [ [ "large" ], [ "emerging" ], [ "financial", "government-backed financial", "real estate activities", "technology" ] ]
+    "5": [ [ "large" ], [ "advanced" ], [ "consumer goods and services", "transportation and storage", "administrative and support service activities", "healthcare", "utilities" ] ]
+    "6": [ [ "large" ], [ "advanced" ], [ "telecommunications", "industrial" ] ]
+    "7": [ [ "large" ], [ "advanced" ], [ "basic materials", "energy", "agriculture", "manufacturing", "mining", "quarrying" ] ]
+    "8": [ [ "large" ], [ "advanced" ], [ "financial", "government-backed financial", "real estate activities", "technology" ] ]
+    "9": [ [ "small" ], [ "emerging" ], [ "consumer goods and services", "transportation and storage", "administrative and support service activities", "healthcare", "utilities" , "telecommunications", "industrials", "basic materials", "energy", "agriculture", "manufacturing", "mining", "quarrying", "financials", "government-backed financials", "real estate activities", "technology" ] ]
+    "10": [ [ "small" ], [ "advanced" ], [ "consumer goods and services", "transportation and storage", "administrative and support service activities", "healthcare", "utilities" , "telecommunications", "industrials", "basic materials", "energy", "agriculture", "manufacturing", "mining", "quarrying", "financials", "government-backed financials", "real estate activities", "technology" ] ]
+  delta:
+    RW: { "1": 55, "2": 60, "3": 45, "4": 55, "5": 30, "6": 35, "7": 40, "8": 50, "9": 70, "10": 50, other: 70 }
+    internal_correlation: { "1": 15, "2": 15, "3": 15, "4": 15, "5": 25, "6": 25, "7": 25, "8": 25, "9": 7.5, "10": 12.5, other: 0 }
+  vega:
+    added_bucket_fields:
+      option_maturity:
+        grouping: tenor-value
+        correlation: { theta: -1 }
+    RW: { "1": 55, "2": 60, "3": 45, "4": 55, "5": 30, "6": 35, "7": 40, "8": 50, "9": 70, "10": 50, other: 70 }
+  curvature:
+    RW: { "1": 1, "2": 1, "3": 1, "4": 1, "5": 1, "6": 1, "7": 1, "8": 1, "9": 1, "10": 1, other: 1000 }
+  bucket_fields:
+    name:
+      grouping: value
+      correlation: 100 # thisis handled by the internal correlation factor above, names are not further correlated.
+    type:
+      grouping: value
+      correlation: 99.9
+  correlation: 15
+  other_treatment: flat_sum
+
+#######################################################################################################################
+################################################## CREDIT #############################################################
+#######################################################################################################################
+credit:
+  mode: fixed
+  fields: [ "rating", "sector" ]
+  delta:
+    RW: { "1a": 1, "1b": 5, "2": 10, "3": 15, "4a": 10, "4b": 10, "5": 25, "6": 30, "other": 10000 }
+  curvature:
+    RW: { default: 1, other: 10000 }
+  vega:
+    RW: { default: 190.5255, other: 10000 }
+    added_bucket_fields:
+      option_maturity:
+        grouping: tenor-value
+        correlation: { theta: -1 }
+  values:
+    "1a": [ [ "AAA", "AA", "A", "BBB" ], [ "sovereign", "central bank", "multilateral development bank" ] ]
+    "1b": [ [ "AAA", "AA", "A", "BBB" ], [ "local government", "government-backed non-financial", "education", "public administration" ] ]
+    "2": [ [ "AAA", "AA", "A", "BBB" ], [ "financial", "government-backed financial" ] ]
+    "3": [ [ "AAA", "AA", "A", "BBB" ], [ "*" ] ]
+    "4a": [ [ "BB", "B", "CCC", "unrated", "defaulted" ], [ "sovereign", "central bank", "multilateral development bank" ] ]
+    "4b": [ [ "BB", "B", "CCC", "unrated", "defaulted" ], [ "local government", "government-backed non-financial", "education", "public administration" ] ]
+    "5": [ [ "BB", "B", "CCC", "unrated", "defaulted" ], [ "financial", "government-backed financial" ] ]
+    "6": [ [ "BB", "B", "CCC", "unrated", "defaulted" ], [ "*" ] ]
+  correlation:
+    "1a": { "1b": 100, "2": 10,  "3": 0,   "4a": 50,  "4b": 50,  "5": 5,   "6": 0 }
+    "1b": { "2": 10,  "3": 0,   "4a": 50,  "4b": 50,  "5": 5,   "6": 0 }
+    "2": { "3": 0,   "4a": 5,   "4b": 5,   "5": 50,  "6": 0 }
+    "3": { "4a": 0,   "4b": 0,   "5": 0,   "6": 50 }
+    "4a": { "4b": 100, "5": 10,  "6": 0 }
+    "4b": { "5": 10,  "6": 0 }
+    "5": { "6": 0 }
+  other_treatment: flat_sum
+  bucket_fields:
+    tenor:
+      grouping: bins
+      values: [ 0.5, 1, 3, 5 ]
+      correlation:
+        type: flat
+        value: 65
+    name:
+      grouping: value
+      correlation: 35
+    basis:
+      grouping: value
+      correlation: 99.9
+
+#######################################################################################################################
+################################################ COMMODITY#############################################################
+#######################################################################################################################
+commodity:
+  mode: fixed
+  fields: [ "commodity-type" ]
+  delta:
+    RW: { "1": 30, "2": 35, "3": 60, "4": 80, "5": 40, "6": 45, "7": 20, "8": 35, "9": 25, "10": 35, "other": 50 }
+  vega:
+    RW: { default: 190.52558888, other: 10000 }
+    added_bucket_fields:
+      option_maturity:
+        grouping: tenor-value
+        correlation: { theta: -1 }
+  curvature:
+    RW: { default: 190.52558888, other: 10000 }
+  values:
+    "1": [ [ "solid combustible" ] ]
+    "2": [ [ "liquid combustible" ] ]
+    "3": [ [ "electricity", "carbon" ] ]
+    "4": [ [ "freight" ] ]
+    "5": [ [ "non-precious metal" ] ]
+    "6": [ [ "gaseous combustible" ] ]
+    "7": [ [ "precious metal" ] ]
+    "8": [ [ "grain", "oilseed" ] ]
+    "9": [ [ "livestock", "dairy" ] ]
+    "10": [ [ "soft", "other agricultural" ] ]
+  correlation: 20
+  other_treatment: uncorrelated
+  bucket_fields:
+    name:
+      grouping: value
+      correlation: 0 # Todo by bucekt
+    grade_location:
+      grouping: value
+      correlation: 99.9
+    tenor:
+      grouping: bins
+      values: [ 0, 0.25, 0.5, 1, 3, 5, 10, 15, 20, inf ]
+      correlation:
+        type: flat
+        value: 65

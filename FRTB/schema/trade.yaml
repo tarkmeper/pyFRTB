@@ -1,0 +1,36 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+description: "Schema required for a trade"
+required: [ 'asset-class', 'notional', 'sensitivity' ]
+additionalProperties: false
+properties:
+  notional: { type: number, minimum: 0.0 }
+  asset-class:
+    enum: [ "credit", "equity", "fx", "commodity", "girr", "securitization", "correlation", "commodity"]
+  base-product: { type: string }
+  level2-product: { type: string }
+  level3-product: { type: string }
+  maturity: { type: number, minimum: 0.0 }
+  sensitivity:
+    type: array
+    items:
+      type: object
+      required: [ 'class', 'measure', 'value' ]
+      properties:
+        class: { enum: [ "girr", "fx", "equity", "commodity", "credit" ] }
+        measure: { enum: [ "delta", "vega", "curvature" ] }
+        type: { type: string }
+        name: { type: string }
+        currency: { type: string }
+        tenor: { oneOf: [ { type: number, minimum: 0.0 }, { type: "null" } ] }
+        value: { type: number }
+  jtd:
+    type: array
+    items:
+      type: object
+      required: [ 'name', 'sector', 'rating', 'value', 'seniority' ]
+      properties:
+        name: { type: string }
+        sector: { type: string }
+        rating: { type: string }
+        value: { type: number }
+        seniority: { type: string }

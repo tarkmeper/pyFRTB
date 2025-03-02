@@ -1,0 +1,66 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+description: "Schema for managing the SBA engine configuration"
+minProperties: 1
+patternProperties:
+    "^.*$":
+      type: object
+      oneOf:
+          ######################## VALUE  TYPE ###################################
+          - properties:
+              grouping: { const: "value" }
+              correlation: { type: number, minimum: 0, maximum: 100 }
+              RW_multiplier: { type: number, minimum: 0.0 }
+            required: [ "grouping", "correlation" ]
+            additionalProperties: false
+
+          ######################## TENOR TYPE ###################################
+          #Must be before bins for somewhat silly reason related to RW_multiplier and bug in jsonschema with
+          #numeric keys in patternProperties
+          - properties:
+              grouping: { const "tenor" }
+              values: { type: array, items: { type: number, minimum: 0.0 } }
+              correlation:
+                type: object
+                properties:
+                  theta: { type: number, minimum: -100, maximum: 0 }
+                  floor: { type: number, minimum: -100, maximum: 100 }
+                required: [ "theta" ]
+              RW_multiplier:
+                type: object
+            required: [ "grouping", "values", "correlation" ]
+
+          ######################## TENOR BUCKET TYPE  ###################################
+          - properties:
+              grouping: { const: "tenor-value" }
+              correlation:
+                type: object
+                properties:
+                  theta: { type: number, minimum: -100, maximum: 0 }
+                  floor: { type: number, minimum: -100, maximum: 100 }
+                required: [ "theta" ]
+              RW_multiplier: { type: number, minimum: 0.0 }
+            required: [ "grouping", "correlation" ]
+
+          ########################  BIN TYPE ###################################
+          - properties:
+              grouping: { const: "bins" }
+              values: { type: array, items: { anyOf: [ { type: string }, { type: number, minimum: 0 } ] } }
+              correlation:
+                type: object
+                oneOf:
+                  - properties:
+                      type: { const: "flat" }
+                      value: { type: number, minimum: 0, maximum: 100 }
+                    required: [ "type", "value" ]
+                  - properties:
+                      type: { const: "matrix" }
+                      matrix: { type: object }
+                    required : [ "type", "matrix" ]
+              RW_multiplier:
+                type: object
+                patternProperties:
+                  "^.+$":
+                    type: number
+                    minimum: 0.0
+            required: [ "grouping", "values", "correlation" ]
+            additionalProperties: false

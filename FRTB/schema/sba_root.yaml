@@ -1,0 +1,14 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+description: "Schema for managing the SBA engine configuration"
+minProperties: 1
+patternProperties:
+  "^[a-z-]+$":
+    type: object
+    properties:
+      mode:
+        enum: [ "variable", "fixed" ]
+        description: "The high-level mode to use for this bucket
+  * Variable means that the number of buckets is based on the input and not predefiend.
+  * Fixed means that the number of buckets is based on a constant pre-defined bucket set in the regulations. "
+    required: [ "mode" ]
+

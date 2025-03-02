@@ -1,0 +1,42 @@
+credit:
+  sovereign: [ "sovereign", "central bank", "multilateral development bank" ]
+  local-government: [ "local government", "government-backed non-financial", "education", "public administration" ]
+  corporates: [ "*" ]
+
+
+maturity:
+  max: 1.0
+  min: 0.25
+  equity: 0.25
+
+RW:
+  AAA: 0.5
+  AA: 2
+  A: 3
+  BBB: 6
+  BB: 15
+  B: 30
+  CCC: 50
+  unrated: 15
+  defaulted: 100
+
+LGD:
+  super-senior: 75
+  senior: 75
+  subordinate3: 100
+  subordinate2: 100
+  subordinate1: 100
+  subordinate0: 100
+  equity: 100
+
+LGD-override:
+  - { "key": [ "credit", "bond", "covered" ],  "value": 25 }
+
+seniority:
+  - super-senior
+  - senior
+  - subordinate3
+  - subordinate2
+  - subordinate1
+  - subordinate0
+  - equity

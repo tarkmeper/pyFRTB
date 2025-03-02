@@ -1,3 +1,6 @@
-pytest
 pyyaml
+importlib_resources
 numpy
+pytest
+jsonschema
+pytest-cov

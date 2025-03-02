@@ -1,0 +1,75 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+description: "Schema required for a configuration of the residual calculation engine"
+required: [ 'credit', 'maturity', 'RW', 'LGD', 'LGD-override', 'seniority' ]
+additionalProperties: false
+properties:
+
+  credit:
+    description: "Mapping of various credit types to their respective bucketting in the FRTB framework"
+    type: object
+    minProperties: 1
+    patternProperties:
+      "^[a-z-]+$":
+        type: array
+        items:
+          type: string
+          pattern: "^[a-zA-Z0-9- *]+$"
+
+  maturity:
+    description: "The minimum and maximum overrides for maturity date of the products"
+    type: object
+    required: [ 'max', 'min', 'equity' ]
+    additionalProperties: false
+    properties:
+      max:
+        type: number
+        minimum: 0.0
+      min:
+        type: number
+        minimum: 0.0
+      equity:
+        type: number
+        minimum: 0.0
+
+  RW:
+    description: "Risk weights for various credit ratings"
+    type: object
+    additionalProperties: false
+    patternProperties:
+      "^[A-Za-z-]+$":
+        type: number
+        minimum: 0.0
+
+  LGD:
+    description: "Loss Given Default risk weighting as specified in the standard for each of the credit classes"
+    type: object
+    additionalProperties: false
+    patternProperties:
+      "^[A-Za-z0-9-]+$":
+        type: number
+        minimum: 0.0
+        maximum: 100
+
+  LGD-override:
+    description: "Specific product overrides for the default LGD rating"
+    type: array
+    items:
+      type: object
+      required: [ 'key', 'value' ]
+      properties:
+        key:
+          type: array
+          minItems: 2
+          items:
+            type: string
+        value:
+          type: number
+          minimum: 0.0
+          maximum: 100
+
+  seniority:
+    description: "A sorted list of seniority ratings for the products.  These should match the LGD ratings provided"
+    type: array
+    items:
+      type: string
+      pattern: "^[a-zA-Z0-9- *]+$"

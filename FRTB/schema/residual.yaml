@@ -1,0 +1,25 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+description: "Schema required for a configuration of the residual calculation engine"
+required: [ 'exotic-products', 'vanilla-products', 'vanilla-value', 'exotic-value' ]
+additionalProperties: false
+properties:
+  exotic-products:
+    description: "List of products that are defined as exotic products"
+    items:
+      items:
+        type: string
+    type: array
+  vanilla-products:
+    type: array
+    description: "List of vanilla products in this configuration."
+    items:
+      items:
+        type: string
+  vanilla-value:
+    description: "The notional multiplier to be applied to vanilla products"
+    type: number
+    minimum: 0.0
+  exotic-value:
+    description: "The notional multiplier to be applied to exotic products"
+    type: number
+    minimum: 0.0

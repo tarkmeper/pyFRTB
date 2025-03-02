@@ -1,0 +1,36 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+description: "Schema for managing the SBA engine configuration"
+properties:
+  mode: { const: "fixed" }
+  correlation:
+    anyOf:
+      - { type: number, minimum: 0, maximum: 100 }
+      - type: object
+        patternProperties:
+          "^.+$":
+              type: object
+              patternProperties:
+                "^.+$":
+                  type: number
+                  minimum: 0.0
+                  maximum: 100.0
+        minProperties: 1
+  bucket_fields: { type: object }
+  other_treatment:
+    enum: [ "flat_sum", "uncorrelated" ]
+    description: "Treatment mode fo the 'other' bucket.  flat_sum just adds absolute value of each item to total, while uncorrelated treats as sum of squares"
+  fields:
+    type: array
+    items: { type: string }
+    description: "List of fields to use to determine the buckets for this sensitivity."
+  values:
+    type: object
+    description: "Mapping of each bucket to the various tuples of fields that below to that bucket.  "
+    patternProperties:
+      "^[0-9]+$":
+        type: array
+        items:
+          type: array
+          items:
+            type: string
+required: [ "mode", "bucket_fields", "correlation", "other_treatment" ]
