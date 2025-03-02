@@ -4,3 +4,4 @@ numpy
 pytest
 jsonschema
 pytest-cov
+tox
