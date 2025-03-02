@@ -10,6 +10,11 @@ jobs:
   sonarqube:
     name: SonarQube
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: [ "pypy3.10", "3.12" ]
+
     steps:
       - uses: actions/checkout@v4
         with:
