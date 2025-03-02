@@ -33,61 +33,42 @@ class SubBucketEngine(Engine):
         A lot of this data could be calculated and stored at the parent level; however, doing this makes the code
         harder to read and manage.  Given that the number of buckets is usually relatively small (50-100) redoing this
         calculation repeatedly isn't likely to be an issue.
-
-        :param details: The bucket_fields details list
         """
         super().__init__(hierarchy, _SCHEMA, bucketting_fields)
 
         # Other fields
         self.correlation_overide = correlation_overide
         self.fields = []
-        self.field_details = []
+        self.calculators = []
 
-        for field_name, details in sorted(bucketting_fields.items()):
-            grouping = details["grouping"]
+        for field_name, field_config in sorted(bucketting_fields.items()):
+            grouping = field_config["grouping"]
 
-            if grouping == "value":
-                rw_multiplier = details["RW_multiplier"] if "RW_multiplier" in details else 1.0
-                correlation = details["correlation"] / 100.0
-                mapping = None
-            elif grouping == 'tenor-value':
-                rw_multiplier = details["RW_multiplier"] if "RW_multiplier" in details else 1.0
-                correlation = details["correlation"]
-                mapping = None
-            elif grouping in ["bins", "tenor"]:
-                values = details["values"]
-                rw_tmp = details["RW_multiplier"] if "RW_multiplier" in details else None
+            match grouping:
+                case "value":
+                    calculator = ValueCalculator(field_config)
+                case "tenor-value":
+                    calculator = TenorValueCalculator(field_config)
+                case "bins":
+                    calculator = BinsCalculator(field_config)
+                case "tenor":
+                    calculator = TenorCalculator(field_config)
+                case _:
+                    raise ValueError(f"Invalid grouping type {grouping}")
 
-                if grouping == "bins":
-                    corr_type = details["correlation"]["type"]
-                    corr_tmp = details["correlation"]
-                else:
-                    corr_tmp = details["correlation"]
-                    corr_type = "tenor"
-
-                mapping, rw_multiplier, correlation = _init_bins(values, rw_tmp, corr_type, corr_tmp)
-            else:
-                raise ValueError(f"Invalid grouping type {val['grouping']}")
-
-            part = FieldDetails(field_name, grouping, mapping, rw_multiplier, correlation)
             self.fields.append(field_name)
-            self.field_details.append(part)
+            self.calculators.append(calculator)
 
     def _adjust_bucket(self, bucket_raw):
         """
         Adjust the bucket based on the field details; this is used to convert the trade into a bucket.
         The way we adjust the buckets depends on the type for each field
         """
-        assert len(bucket_raw) == len(self.field_details)
+        assert len(bucket_raw) == len(self.fields)
         bucket_data = []
-        for value, details in zip(bucket_raw, self.field_details):
-            match details.grouping:
-                case "value" | "tenor-value":
-                    bucket_data.append(value)
-                case "bins" | "tenor":
-                    bucket_data.append(details.mapping[value])
-                case _:
-                    raise ValueError(f"Invalid grouping type {details.grouping}")
+        for value, calculator in zip(bucket_raw, self.calculators):
+            mapped_value = calculator.map_value(value)
+            bucket_data.append(mapped_value)
         return tuple(bucket_data)
 
     def add(self, sens_entry, weight):
@@ -119,22 +100,13 @@ class SubBucketEngine(Engine):
         keys_list = list(self.buckets.keys())
         keys_transpose = list(map(list, zip(*keys_list)))
 
-        for field, keys in zip(self.field_details, keys_transpose):
+        for field_name, calculator, keys in zip(self.fields, self.calculators, keys_transpose):
             keys_arr = numpy.array(keys)
-            match field.grouping:
-                case "value":
-                    rw_vect, corr = _calculate_value_grouping(keys_arr, field)
-                    rw_vect = field.rw_multiplier
-                case "tenor-value":
-                    corr = _vega_tenor_correlation_calc(keys_arr, field.correlation["theta"] / 100)
-                    rw_vect = field.rw_multiplier
-                case "bins" | "tenor":
-                    corr, rw_vect = _calculate_bins_grouping(keys_arr, field)
-                case _:
-                    assert False
+            corr, rw_vect = calculator.evaluate(keys_arr)
 
             matrix *= corr
             values *= rw_vect
+
         rw_values = values[:, None] * values  # create a 2-d correlation matrix
         final = numpy.multiply(rw_values, matrix)
         return values.sum(), math.sqrt(final.sum())
@@ -184,21 +156,7 @@ def _init_bins(values, rw_tmp, correlation_type, corr_tmp):
     return mapping, rw_multiplier, correlation
 
 
-def _calculate_value_grouping(keys_arr: numpy.ndarray, details: FieldDetails):
-    """
-    Values are pretty simple since they only support a floating point correlation and multiplier
-    however, the correlation should only aply if the numbers are different.  If the numbers are the
-    same we should use 1.0.  More numpy magic to compare array to itself.
-    """
-    mask = (keys_arr[:, None] == keys_arr)
-
-    corr = numpy.ones(mask.shape)
-    corr[~mask] = details.correlation
-
-    return details.rw_multiplier, corr
-
-
-def _calculate_bins_grouping(keys_arr, details):
+def _calculate_bins_grouping(keys_arr, correlation, rw_multiplier):
     # need to handle the nan (which occur due to inflation and basis swaps) and mast those out for the
     # calculation.  We then replace the keys value with the first index in the buckets so that we can
     # generate a valid correlation for it before masking it off.
@@ -209,15 +167,75 @@ def _calculate_bins_grouping(keys_arr, details):
     # this is pretty magic! It is a numpy trick to get the correlation matrix from the indexes in the
     # field values.  It does a 2d lookup on the base correlation array for every element in the keys
     # array to produce a copmlete correlation matrix we can use.
-    corr_base = details.correlation
+    corr_base = correlation
     corr = corr_base[keys_arr][:, keys_arr.T]
     corr[mask] = 1.0
 
     # more numpy magic - this pulls out the RW for each of the keys that we have so that we can then
     # multiply up those values by the bucket specfic RW.
     rw_multiplier_vect = 1.0
-    if details.rw_multiplier is not None:
-        rw_multiplier_vect = details.rw_multiplier[keys_arr]
+    if rw_multiplier is not None:
+        rw_multiplier_vect = rw_multiplier[keys_arr]
         rw_multiplier_vect[mask_vect] = 1.0
 
     return corr, rw_multiplier_vect
+
+
+class ValueCalculator:
+    def __init__(self, config):
+        self.rw_multiplier = config["RW_multiplier"] if "RW_multiplier" in config else 1.0
+        self.correlation = config["correlation"] / 100.0
+
+    def map_value(self, value):
+        return value
+
+    def evaluate(self, keys_arr):
+        mask = (keys_arr[:, None] == keys_arr)
+
+        corr = numpy.ones(mask.shape)
+        corr[~mask] = self.correlation
+
+        return corr, self.rw_multiplier
+
+
+class TenorValueCalculator:
+    def __init__(self, config):
+        self.rw_multiplier = config["RW_multiplier"] if "RW_multiplier" in config else 1.0
+        self.correlation = config["correlation"]
+
+    def map_value(self, value):
+        return value
+
+    def evaluate(self, keys_arr):
+        return _vega_tenor_correlation_calc(keys_arr, self.correlation["theta"] / 100), self.rw_multiplier
+
+
+class BinsCalculator:
+    def __init__(self, config):
+        values = config["values"]
+        rw_tmp = config["RW_multiplier"] if "RW_multiplier" in config else None
+        corr_type = config["correlation"]["type"]
+        corr_tmp = config["correlation"]
+
+        self.mapping, self.rw_multiplier, self.correlation = _init_bins(values, rw_tmp, corr_type, corr_tmp)
+
+    def map_value(self, value):
+        return self.mapping[value]
+
+    def evaluate(self, keys_arr):
+        return _calculate_bins_grouping(keys_arr, self.correlation, self.rw_multiplier)
+
+
+class TenorCalculator:
+    def __init__(self, config):
+        values = config["values"]
+        rw_tmp = config["RW_multiplier"] if "RW_multiplier" in config else None
+        corr_tmp = config["correlation"]
+
+        self.mapping, self.rw_multiplier, self.correlation = _init_bins(values, rw_tmp, "tenor", corr_tmp)
+
+    def map_value(self, value):
+        return self.mapping[value]
+
+    def evaluate(self, keys_arr):
+        return _calculate_bins_grouping(keys_arr, self.correlation, self.rw_multiplier)
